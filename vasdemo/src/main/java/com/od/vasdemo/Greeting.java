@@ -15,6 +15,7 @@ public class Greeting {
     }
 
     public String getContent() {
-        return content;
+        //returns content
+    	return content;
     }
 }
