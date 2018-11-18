@@ -30,15 +30,6 @@ public class ApplicationController {
 	
 	@Autowired
 	KPIsRepository kpis;
-	
-	private static final String template = "Hello, %s!";
-	private final AtomicLong counter = new AtomicLong();
-
-	@RequestMapping("/greeting")
-	public Greeting greeting(@RequestParam(value="name", defaultValue="World") String name) {
-		return new Greeting(counter.incrementAndGet(),
-				String.format(template, name));
-	}
 
 	//endpoint for processing a specific file
 	//the file will be retrieved from the web location
@@ -72,6 +63,7 @@ public class ApplicationController {
 				//save KPIs using MeteRegistry
 				kpis.updateCounters(mCPJSON);
 
+				//return results of the processing to the client
 				return mCPJSON.getMetrics().toString();
 			}
 			else 
@@ -85,11 +77,14 @@ public class ApplicationController {
 	//the mysql database will be checked for file processed
 	//the metrics will be retrieved if that is the case
 	@RequestMapping("/metrics")
-	public String returnMetrics(@RequestParam(value="date") String fileDate) {
-		return metricsRepository.getMetrics(fileDate);
+	public String returnMetrics(@RequestParam(value="date", defaultValue="NoDate") String fileDate) {
+		if (fileDate.matches("^(\\d{4}-\\d{2}\\-\\d{2})")) {
+			return metricsRepository.getMetrics(fileDate);
+		} else
+			return "The entered date does is not present or does not match the YYYY-MM-DD pattern";
 	}
 
-	//endpoint for returning the kpis 
+	//endpoint for returning the kpis of the running process
 	@RequestMapping("/kpis")
 	public String returnKPIs() throws JSONException {
 		return kpis.getKPIs().toString();

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 import com.od.vasdemo.ApplicationController;
 import com.od.vasdemo.service.MCPJSONFile;
 
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 
 @Repository
@@ -37,21 +38,21 @@ public class KPIsRepository {
 		registry.counter("custom.nr_calls").increment(mCPJSON.getnumberOfcalls());
 		registry.counter("custom.nr_messages").increment(mCPJSON.getnumberOfmessages());
 
-		//add counters for new origins
-		mCPJSON.getnumberCallsOrig().forEach((k,v)->registry.counter("Orig:"+k).increment(v));
-		//add counters for new destinations
-		mCPJSON.getnumberCallsDest().forEach((k,v)->registry.counter("Dest:"+k).increment(v));
+		//add counters for new origins dynamically 
+		mCPJSON.getnumberCallsOrig().forEach((k,v)->registry.counter("custom.orig."+k).increment(v));
+		//add counters for new destinations dynamically
+		mCPJSON.getnumberCallsDest().forEach((k,v)->registry.counter("custom.dest.:"+k).increment(v));
 	}
+	
 	
 	public JSONObject getKPIs () throws JSONException {
 		logger.debug(registry.getMeters().toString());
 		JSONObject recordKPIs = new JSONObject();
 		
-		recordKPIs.put("Total number of processed JSON files", registry.counter("custom.nr_processed_json_files").count());
-		recordKPIs.put("Total number of rows", registry.counter("custom.nr_rows").count());
-		recordKPIs.put("Total number of calls", registry.counter("custom.nr_calls").count());
-		recordKPIs.put("Total number of messages", registry.counter("custom.nr_messages").count());
-		
+		for(Meter item : registry.getMeters()){
+			if (item.getId().getName().startsWith("custom."))
+			recordKPIs.put(item.getId().getName(), registry.counter(item.getId().getName()).count());
+		}
 		return recordKPIs;
 	}
 }
