@@ -56,7 +56,15 @@ public class MCPJSONFile {
 	{
 		return numberOfmessages;
 	}
-	
+	public HashMap <Integer,Integer> getnumberCallsOrig()
+	{
+		return numberCallsOrig;
+	}
+	public HashMap <Integer,Integer> getnumberCallsDest()
+	{
+		return numberCallsDest;
+	}
+
 	/* contructor - read file and process it */
 	public MCPJSONFile(String link, String fileName, ConfigProp appProps){
 
@@ -134,6 +142,7 @@ public class MCPJSONFile {
 				    					logger.debug("Error parsing origin/destination of the call");
 				    					e.printStackTrace();
 				    				}
+				    				numberOfcalls++;
 				    			}		
 				    		}
 				    				
@@ -165,6 +174,8 @@ public class MCPJSONFile {
 										}
 					    					
 					    			});
+					    			
+					    			numberOfmessages++;
 
 				    			}
 				    		}

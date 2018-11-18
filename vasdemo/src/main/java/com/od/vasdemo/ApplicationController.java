@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.od.actuator.KPIsRepository;
+import com.od.vasdemo.kpis.KPIsRepository;
 import com.od.vasdemo.persist.MetricsRepository;
 import com.od.vasdemo.service.MCPJSONFile;
 
@@ -91,7 +91,7 @@ public class ApplicationController {
 
 	//endpoint for returning the kpis 
 	@RequestMapping("/kpis")
-	public String returnKPIs() {
+	public String returnKPIs() throws JSONException {
 		return kpis.getKPIs().toString();
 	}
 
