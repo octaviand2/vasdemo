@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
@@ -25,10 +26,16 @@ import com.od.vasdemo.ConfigProp;
 
 public class MCPJSONFile {
 
+	private boolean processed=false;
+	
 	//metrics for each processed file
+	private int rowsProcessed=0;
 	private int rowsMissingFields=0;
 	private int rowsFieldErrors=0;
+	private int numberOfcalls=0;
+	private int numberOfmessages=0;
 	private int messagesBlankContent=0;
+	private HashMap <Integer,Integer> numberCallsOrig = new HashMap<Integer,Integer>();
 	private HashMap <Integer,Integer> numberCallsDest = new HashMap<Integer,Integer>();
 	private HashMap <String,Integer> numberCallsOrigDest = new HashMap<String,Integer>();
 	private int numberOKCalls=0;
@@ -37,6 +44,19 @@ public class MCPJSONFile {
 	private HashMap <Integer,Integer> avgDurationCallsDest = new HashMap<Integer,Integer>();
 	private HashMap <String,Integer> wordOccurence = new HashMap<String,Integer>();
 
+	public int getRowsProcessed()
+	{
+		return rowsProcessed;
+	}
+	public int getnumberOfcalls()
+	{
+		return numberOfcalls;
+	}
+	public int getnumberOfmessages()
+	{
+		return numberOfmessages;
+	}
+	
 	/* contructor - read file and process it */
 	public MCPJSONFile(String link, String fileName, ConfigProp appProps){
 
@@ -47,13 +67,17 @@ public class MCPJSONFile {
 		try {
 			URL url = new URL( link );
 
-			URLConnection conexion = url.openConnection();
-			conexion.connect();
+			HttpURLConnection con =
+					(HttpURLConnection) new URL(link).openConnection();
+			if (con.getResponseCode() != HttpURLConnection.HTTP_OK)
+				return;
+
 			BufferedInputStream in = new BufferedInputStream(url.openStream());
 			BufferedReader reader = new BufferedReader (new InputStreamReader (in, StandardCharsets.UTF_8));
 		    String line;
 		    while ((line = reader.readLine()) != null) {
 		    	try {
+		    		rowsProcessed++;
 		    		JSONObject record = new JSONObject(line);
 		    		logger.debug("Parsed JSON: "+ record.toString());
 
@@ -89,6 +113,12 @@ public class MCPJSONFile {
 					    				if (numberCallsOrigDest.containsKey(originCountryCode+","+destinationCountryCode)) 
 					    					numberCallsOrigDest.put(originCountryCode+","+destinationCountryCode, numberCallsOrigDest.get(originCountryCode+","+destinationCountryCode)+1);
 					    				else numberCallsOrigDest.put(originCountryCode+","+destinationCountryCode, 1);
+					    				
+				    				    //add number of calls per current origin 
+					    				if (numberCallsOrig.containsKey(originCountryCode)) 
+					    					numberCallsOrig.put(originCountryCode, numberCallsOrig.get(originCountryCode)+1);
+					    				else numberCallsOrig.put(originCountryCode, 1);
+
 					    				
 					    				//add number of calls per current destination, required to calculate average duration at the end
 					    				if (numberCallsDest.containsKey(destinationCountryCode)) {
@@ -164,6 +194,7 @@ public class MCPJSONFile {
 		} catch (IOException e) {
 			// handle exception
 			e.printStackTrace();
+			return;
 		}
 		
 		//calculate average call duration
@@ -171,8 +202,14 @@ public class MCPJSONFile {
 	        logger.debug("Destination Code: " + entry.getKey() + ": Total Duration: " + entry.getValue() + " Number of Calls:" + numberCallsDest.get(entry.getKey()));
 	        avgDurationCallsDest.put(entry.getKey(), entry.getValue()/numberCallsDest.get(entry.getKey()));
 	    }
+		
+		processed=true;
 	}
 
+	public boolean fileProcessed()
+	{
+		return processed;
+	}
 	
 	public JSONObject getMetrics() throws JSONException
 	{

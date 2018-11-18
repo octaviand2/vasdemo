@@ -7,14 +7,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.od.actuator.KPIsRepository;
 import com.od.vasdemo.persist.MetricsRepository;
 import com.od.vasdemo.service.MCPJSONFile;
 
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.net.URL;
 
-import java.net.HttpURLConnection;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.boot.configurationprocessor.json.JSONException;
 
@@ -27,22 +27,10 @@ public class ApplicationController {
 
 	@Autowired
 	MetricsRepository metricsRepository;
-
-	/* Method to check if a file exists at a specific URL */
-	private boolean exists(String URLName){
-		try {
-			HttpURLConnection.setFollowRedirects(false);
-			HttpURLConnection con =
-					(HttpURLConnection) new URL(URLName).openConnection();
-            logger.debug("Response code: " + con.getResponseCode()); 
-			return (con.getResponseCode() == HttpURLConnection.HTTP_OK);
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-			return false;
-		}
-	}
-
+	
+	@Autowired
+	KPIsRepository kpis;
+	
 	private static final String template = "Hello, %s!";
 	private final AtomicLong counter = new AtomicLong();
 
@@ -61,36 +49,39 @@ public class ApplicationController {
 
 			//file matches the pattern
 			logger.debug("File name matches pattern");
-			
+
 			StringTokenizer st = new StringTokenizer(fileDate, "-");
 			String fileName="";
-		    while(st.hasMoreTokens()) fileName += st.nextToken();
-		    
+			while(st.hasMoreTokens()) fileName += st.nextToken();
+
 			String url=appProperties.getFilesURL()+"MCP_"+fileName+".json";
 
 			logger.debug("File to check: "+url);
 			//check if file exits
-			if (exists(url)) {
-				logger.debug("File exists at the configured URL");
-					
-				//processsing file
-				MCPJSONFile mCPJSON= new MCPJSONFile(url, "MCP_"+fileName+".json", appProperties);
-				
+
+			//processing file
+			MCPJSONFile mCPJSON= new MCPJSONFile(url, "MCP_"+fileName+".json", appProperties);
+
+			if (mCPJSON.fileProcessed()) {
+
 				//persist the processed metrics
 				boolean rowsInserted = metricsRepository.insertMetrics(fileDate, mCPJSON.getMetrics());
 				if (!rowsInserted)
-					return "File has been processed already";
-				
+					return "File has been processed already and exists in the database";
+
+				//save KPIs using MeteRegistry
+				kpis.updateCounters(mCPJSON);
+
 				return mCPJSON.getMetrics().toString();
 			}
-			else
-				return "There is no json file for the date entered: "+fileDate;
+			else 
+				return "File for " +  fileDate + " could not be processed!";
 		}
 		else
 			return "The entered date does is not present or does not match the YYYY-MM-DD pattern";
 	}
 
-	//endpoint for returning the metrics for a processed file
+	//endpoint for returning the summary for a processed file
 	//the mysql database will be checked for file processed
 	//the metrics will be retrieved if that is the case
 	@RequestMapping("/metrics")
@@ -98,4 +89,11 @@ public class ApplicationController {
 		return metricsRepository.getMetrics(fileDate);
 	}
 
+	//endpoint for returning the kpis 
+	@RequestMapping("/kpis")
+	public String returnKPIs() {
+		return kpis.getKPIs().toString();
+	}
+
+	
 }

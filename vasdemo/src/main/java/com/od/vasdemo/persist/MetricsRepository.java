@@ -14,8 +14,10 @@ import com.od.vasdemo.ApplicationController;
 
 @Repository
 public class MetricsRepository {
+
 	@Autowired
 	JdbcTemplate jdbcTemplate;
+
 	Logger logger = LoggerFactory.getLogger(ApplicationController.class);
 
 	private String insertSQL = "INSERT INTO VAS_METRICS (filedate, json) values (?, ?)";
