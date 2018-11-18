@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.od.vasdemo.persist.MetricsRepository;
 import com.od.vasdemo.service.MCPJSONFile;
 
 import org.slf4j.Logger;
@@ -24,6 +25,8 @@ public class ApplicationController {
 	@Autowired
 	private ConfigProp appProperties;
 
+	@Autowired
+	MetricsRepository metricsRepository;
 
 	/* Method to check if a file exists at a specific URL */
 	private boolean exists(String URLName){
@@ -72,6 +75,12 @@ public class ApplicationController {
 					
 				//processsing file
 				MCPJSONFile mCPJSON= new MCPJSONFile(url, "MCP_"+fileName+".json", appProperties);
+				
+				//persist the processed metrics
+				boolean rowsInserted = metricsRepository.insertMetrics(fileDate, mCPJSON.getMetrics());
+				if (!rowsInserted)
+					return "File has been processed already";
+				
 				return mCPJSON.getMetrics().toString();
 			}
 			else
@@ -86,7 +95,7 @@ public class ApplicationController {
 	//the metrics will be retrieved if that is the case
 	@RequestMapping("/metrics")
 	public String returnMetrics(@RequestParam(value="date") String fileDate) {
-		return fileDate;
+		return metricsRepository.getMetrics(fileDate);
 	}
 
 }
